@@ -4,7 +4,7 @@ import AuthController from "../controllers/authController";
 const authRoutes = () => {
   const router = e.Router();
 
-  router.post("/login", AuthController.login);
+  router.get("/login", AuthController.login);
 
   return router;
 };
