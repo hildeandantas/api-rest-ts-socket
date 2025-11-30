@@ -1,66 +1,71 @@
-name: CI/CD Multi-Ambiente AWS
+name: CI/CD Multi-Ambiente EC2
 
 on:
   push:
     branches:
       - dev    # Homologação
-      - master   # Produção
+      - master # Produção
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
-    
-    # 1. DEFINE O ENVIRONMENT COM BASE NA BRANCH
+    # Define o ambiente (dev ou prod)
     environment: 
-      # Condição ternária para escolher o nome do ambiente:
       name: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
-      
-    # Configuração de segurança OIDC
+
     permissions:
       id-token: write 
       contents: read
 
     steps:
-      - name: Debug OIDC Claims
-        run: |
-          echo "Ref: ${{ github.ref }}"
-          echo "Ref Name: ${{ github.ref_name }}"
-          echo "Event: ${{ github.event_name }}"
       - name: Checkout do Código
         uses: actions/checkout@v4
-        
-      # 2. Configura Credenciais AWS
+
+      # 1. Setup do Node.js e Build (Garante que o código não tem erros antes de enviar)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Ajuste conforme sua versão
+          
+      - name: Instalar Dependências e Build
+        run: |
+          npm ci
+          npm run build --if-present
+      
+      # 2. Configura Credenciais AWS (Útil se precisar acessar S3 ou outros serviços AWS)
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          # Acessa o secret AWS_ROLE_ARN DO AMBIENTE ESCOLHIDO
-          role-to-assume: 'arn:aws:iam::732029698762:role/dev'
-          aws-region: 'us-east-1'
-          
-      # 3. Passo de Deploy
-      - name: Deploy
-        run: |
-          echo "Iniciando deploy para o ambiente ${{ vars.ENVIRONMENT_NAME }}..."
-          # ... seus comandos de deploy
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # Secret configurado no Environment
+          aws-region: ${{ secrets.AWS_REGION }}
 
+      # 3. Deploy via SSH na EC2
+      - name: Deploy na EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}         # IP da sua máquina (Elastic IP)
+          username: ${{ secrets.EC2_USERNAME }} # Geralmente 'ubuntu' ou 'ec2-user'
+          key: ${{ secrets.EC2_SSH_KEY }}       # Sua chave privada .pem (conteúdo inteiro)
+          port: 22
+          script: |
+            # Comandos que rodarão DENTRO do servidor:
+            
+            # 1. Carrega variáveis de ambiente do sistema (importante para Node/NVM)
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-
-
-
-# name: 'Automatic Flow'
-
-# on: push
-
-# jobs:
-#     build:
-#         runs-on: ubuntu-latest
-#         steps:
-#             - uses: actions/checkout@v3
-#             - name: Using Node.js
-#               uses: actions/setup-node@v2
-#               with:
-#                   node-version: 20.x
-#             - name: Install & Build
-#               run: |
-#                   npm init
+            # 2. Vai para a pasta do projeto (A pasta já deve existir, veja Parte 2)
+            cd /home/${{ secrets.EC2_USERNAME }}/meu-projeto-api
+            
+            # 3. Atualiza o código
+            git pull origin ${{ github.ref_name }}
+            
+            # 4. Instala dependências e Rebuilda
+            npm install
+            npm run build
+            
+            # 5. Reinicia o processo com PM2
+            # Se for a primeira vez, use 'pm2 start dist/main.js --name api-backend'
+            pm2 restart api-backend || pm2 start dist/main.js --name api-backend
+            pm2 save
