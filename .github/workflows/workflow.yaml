@@ -29,7 +29,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           # Acessa o secret AWS_ROLE_ARN DO AMBIENTE ESCOLHIDO
-          role-to-assume: 'arn:aws:iam::732029698762:role/teste'
+          role-to-assume: 'arn:aws:iam::732029698762:role/dev'
           aws-region: 'us-east-1'
           
       # 3. Passo de Deploy
