@@ -3,14 +3,19 @@ name: CI/CD Multi-Ambiente AWS
 on:
   push:
     branches:
-      - dev  # Homologação
-      - master     # Produção
+      - dev    # Homologação
+      - master   # Produção
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
-    # Adiciona permissões de token OIDC
+    # 1. DEFINE O ENVIRONMENT COM BASE NA BRANCH
+    environment: 
+      # Condição ternária para escolher o nome do ambiente:
+      name: ${{ github.ref == 'refs/heads/master' && 'Producao' || 'Homologacao' }}
+      
+    # Configuração de segurança OIDC
     permissions:
       id-token: write 
       contents: read
@@ -19,45 +24,22 @@ jobs:
       - name: Checkout do Código
         uses: actions/checkout@v4
         
-      # 1. Define Variáveis de Ambiente e Role ARN
-      - name: Definir Variáveis de Ambiente
-        id: config
-        run: |
-          if [ "${{ github.ref_name }}" == "master" ]; then
-            echo "AWS_ROLE_ARN=${{ secrets.AWS_ROLE_ARN_PROD }}" >> $GITHUB_ENV
-            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
-            echo "ENV_NAME=producao" >> $GITHUB_ENV
-            echo "DEPLOY_TARGET=master" >> $GITHUB_ENV
-          elif [ "${{ github.ref_name }}" == "dev" ]; then
-            echo "AWS_ROLE_ARN=${{ secrets.AWS_ROLE_ARN_HOMOLOG }}" >> $GITHUB_ENV
-            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
-            echo "ENV_NAME=homologacao" >> $GITHUB_ENV
-            echo "DEPLOY_TARGET=dev" >> $GITHUB_ENV
-          else
-            echo "Nenhuma branch de deploy configurada."
-            exit 1
-          fi
-
-      # 2. Configura Credenciais AWS (Assumindo a Role com OIDC)
+      # 2. Configura Credenciais AWS
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          # Opcional: role-session-name: ${{ github.run_id }}-${{ env.ENV_NAME }}
-
-      # 3. Build/Compilação do Projeto (Pode ser isolado ou não)
-      # ... (Passos de build, testes, etc.) ...
-      
-      # 4. Passo de Deploy Específico
-      - name: Deploy para ${{ env.ENV_NAME }}
-        # Este passo usa a ferramenta de deploy (ex: AWS CLI, SAM CLI, Terraform)
-        # O comando deve ser parametrizado com ${{ env.ENV_NAME }} se a infraestrutura
-        # for separada por nome dentro de uma única conta/região.
+          # Acessa o secret AWS_ROLE_ARN DO AMBIENTE ESCOLHIDO
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      # 3. Passo de Deploy
+      - name: Deploy
         run: |
-          echo "Iniciando deploy para o ambiente de ${{ env.ENV_NAME }}..."
-          # Exemplo com AWS CLI para deploy de CloudFormation:
-          # aws cloudformation deploy --template-file template.yaml --stack-name meuapp-${{ env.ENV_NAME }} --capabilities CAPABILITY_IAM
+          echo "Iniciando deploy para o ambiente ${{ vars.ENVIRONMENT_NAME }}..."
+          # ... seus comandos de deploy
+
+
+
 
 
 # name: 'Automatic Flow'
