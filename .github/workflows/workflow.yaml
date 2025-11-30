@@ -13,7 +13,7 @@ jobs:
     # 1. DEFINE O ENVIRONMENT COM BASE NA BRANCH
     environment: 
       # Condição ternária para escolher o nome do ambiente:
-      name: ${{ github.ref == 'refs/heads/master' && 'Producao' || 'Homologacao' }}
+      name: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
       
     # Configuração de segurança OIDC
     permissions:
