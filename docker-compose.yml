@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  #prod
+  api-prod:
+    container_name: api-prod
+    build: .
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_NAME = 'bdhd'
+      - DB_USER = 'freela_owner'
+      - DB_PASSWORD = 'npg_Xcb2WhL4HsKf'
+      - DB_HOST = 'ep-old-bird-a5y22y5j-pooler.us-east-2.aws.neon.tech'
+    ports:
+      - "3000:3000" # Porta Externa 3000 -> Porta Interna 3000
+
+  #dev
+  api-dev:
+    container_name: api-dev
+    build: .
+    restart: always
+    environment:
+      - NODE_ENV=development
+      - PORT=3000 # O Nest dentro do container acha que é 3000
+      - DB_USER = 'freela_owner'
+      - DB_PASSWORD = 'npg_Xcb2WhL4HsKf'
+      - DB_HOST = 'ep-old-bird-a5y22y5j-pooler.us-east-2.aws.neon.tech'
+    ports:
+      - "3001:3000" # Porta Externa 3001 -> Porta Interna 3000

@@ -31,7 +31,66 @@ jobs:
       - name: Instalar Dependências e Build
         run: |
           npm ci
-          npm run build --if-present
+          npm run build --if-presentname: CI/CD Docker EC2 Single Host
+
+on:
+  push:
+    branches:
+      - dev
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: 
+      name: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
+
+    permissions:
+      id-token: write 
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # (Opcional) Build de teste para garantir que não tem erro de sintaxe
+      - name: Setup Node para Teste
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci && npm run build --if-present
+
+      - name: Configurar Credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy via SSH (Docker Compose)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }} # ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/meu-projeto-api
+            
+            # 1. Baixa as atualizações do código
+            git pull origin ${{ github.ref_name }}
+            
+            # 2. Decide qual container atualizar baseado na branch
+            if [ "${{ github.ref_name }}" == "master" ]; then
+              echo "Atualizando PRODUCAO..."
+              # Reconstrói e reinicia APENAS o container de prod
+              docker compose up -d --build api-prod
+            else
+              echo "Atualizando DEV/HOMOLOG..."
+              # Reconstrói e reinicia APENAS o container de dev
+              docker compose up -d --build api-dev
+            fi
+            
+            # Limpa imagens antigas para não lotar o disco da EC2
+            docker image prune -f
       
       # 2. Configura Credenciais AWS (Útil se precisar acessar S3 ou outros serviços AWS)
       - name: Configurar Credenciais AWS
