@@ -29,8 +29,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           # Acessa o secret AWS_ROLE_ARN DO AMBIENTE ESCOLHIDO
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: 'arn:aws:iam::732029698762:role/prod'
+          aws-region: us-east-1'
           
       # 3. Passo de Deploy
       - name: Deploy
