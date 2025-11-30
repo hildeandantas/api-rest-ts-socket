@@ -1,37 +1,4 @@
-name: CI/CD Multi-Ambiente EC2
-
-on:
-  push:
-    branches:
-      - dev    # Homologação
-      - master # Produção
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    # Define o ambiente (dev ou prod)
-    environment: 
-      name: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
-
-    permissions:
-      id-token: write 
-      contents: read
-
-    steps:
-      - name: Checkout do Código
-        uses: actions/checkout@v4
-
-      # 1. Setup do Node.js e Build (Garante que o código não tem erros antes de enviar)
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20' # Ajuste conforme sua versão
-          
-      - name: Instalar Dependências e Build
-        run: |
-          npm ci
-          npm run build --if-presentname: CI/CD Docker EC2 Single Host
+name: CI/CD Docker EC2 Single Host
 
 on:
   push:
@@ -91,40 +58,3 @@ jobs:
             
             # Limpa imagens antigas para não lotar o disco da EC2
             docker image prune -f
-      
-      # 2. Configura Credenciais AWS (Útil se precisar acessar S3 ou outros serviços AWS)
-      - name: Configurar Credenciais AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # Secret configurado no Environment
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      # 3. Deploy via SSH na EC2
-      - name: Deploy na EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}         # IP da sua máquina (Elastic IP)
-          username: ${{ secrets.EC2_USERNAME }} # Geralmente 'ubuntu' ou 'ec2-user'
-          key: ${{ secrets.EC2_SSH_KEY }}       # Sua chave privada .pem (conteúdo inteiro)
-          port: 22
-          script: |
-            # Comandos que rodarão DENTRO do servidor:
-            
-            # 1. Carrega variáveis de ambiente do sistema (importante para Node/NVM)
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-            # 2. Vai para a pasta do projeto (A pasta já deve existir, veja Parte 2)
-            cd /home/${{ secrets.EC2_USERNAME }}/meu-projeto-api
-            
-            # 3. Atualiza o código
-            git pull origin ${{ github.ref_name }}
-            
-            # 4. Instala dependências e Rebuilda
-            npm install
-            npm run build
-            
-            # 5. Reinicia o processo com PM2
-            # Se for a primeira vez, use 'pm2 start dist/main.js --name api-backend'
-            pm2 restart api-backend || pm2 start dist/main.js --name api-backend
-            pm2 save
