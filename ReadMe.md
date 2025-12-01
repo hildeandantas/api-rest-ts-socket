@@ -1,107 +1,116 @@
-# API REST Template com TypeScript, JWT e WebSocket
+# API REST TS Socket - Infraestrutura & CI/CD
 
-Este projeto é um template de **API RESTful** desenvolvido em **TypeScript** utilizando **Express**, com autenticação **JWT** e integração de **WebSocket** via **Socket.IO**.  
-Ele oferece uma base robusta para aplicações modernas, incluindo rotas para criação, edição, deleção e busca de usuários, além de autenticação segura.
+Este projeto consiste em uma API desenvolvida em **Node.js (TypeScript)**, utilizando **Docker** para containerização e **AWS EC2** para hospedagem.
 
----
+O diferencial desta infraestrutura é a estratégia de **Otimização de Custos**, onde rodamos dois ambientes isolados (Produção e Homologação) dentro de uma única instância EC2, utilizando Docker Compose para orquestração de portas e serviços.
 
-## 🚀 Funcionalidades
+## 🚀 Arquitetura de Deploy
 
-- **API RESTful** com rotas para:
-  - Criação de usuários
-  - Edição de usuários
-  - Deleção de usuários
-  - Busca de usuários (por ID e listagem)
-- **Autenticação JWT** para proteger rotas e garantir segurança
-- **WebSocket** com Socket.IO para comunicação em tempo real
-- **TypeScript** para tipagem estática e maior confiabilidade
-- **Sequelize** para integração com banco de dados relacional (**PostgreSQL**)
-- Estrutura de projeto organizada para fácil manutenção e escalabilidade
+O deploy é totalmente automatizado via **GitHub Actions**, conectando-se à AWS de forma segura sem chaves permanentes (long-lived credentials).
 
----
+### Fluxo do Pipeline (CI/CD)
 
-## 📦 Instalação
-
-1. Clone o repositório:
-   ```sh
-   git clone https://github.com/seu-usuario/api-rest-ts-socket.git
-   cd api-rest-ts-socket
-   ```
-
-2. Instale as dependências:
-   ```sh
-   npm install
-   ```
-
-3. Configure as variáveis de ambiente:  
-   Renomeie o arquivo `.env.example` para `.env` e preencha com suas configurações de banco de dados e JWT.
-
-4. Execute as migrações e seeds:
-   ```sh
-   npm run init
-   ```
-
-5. Inicie o servidor:
-   ```sh
-   npm run start
-   # ou, para ambiente de desenvolvimento
-   npm run dev
-   ```
+1.  **Trigger:**
+    * Push na branch `dev` -> Dispara deploy para ambiente de **Homologação**.
+    * Merge/Push na branch `master` -> Dispara deploy para ambiente de **Produção**.
+2.  **Segurança (OIDC):**
+    * O GitHub Actions se autentica na AWS assumindo uma **IAM Role** específica via **OpenID Connect (OIDC)**. Isso elimina a necessidade de salvar `AWS_ACCESS_KEY` nos secrets.
+3.  **Acesso ao Servidor:**
+    * O workflow acessa a instância EC2 via SSH utilizando uma chave privada armazenada nos GitHub Secrets.
+4.  **Build & Deploy:**
+    * O código é atualizado (`git pull`).
+    * Um arquivo `.env` é gerado dinamicamente com base nos segredos do ambiente (Dev ou Prod).
+    * O Docker Compose constrói a imagem e recria apenas o container do ambiente específico.
 
 ---
 
-## 📌 Rotas Principais
+## 🛠️ Gerenciamento de Variáveis de Ambiente
 
-- **Usuários**
-  - `POST /users/create` — Criação de usuário
-  - `GET /users/:id` — Busca de usuário por ID (**JWT obrigatório**)
-  - `GET /users/` — Listagem de usuários (**JWT obrigatório**)
-  - `PUT /users/:id` — Edição de usuário (**JWT obrigatório**)
-  - `DELETE /users/:id` — Deleção de usuário (**JWT obrigatório**)
+Por segurança, **nenhuma senha ou credencial é versionada** no código.
 
-- **Autenticação**
-  - `POST /auth/login` — Login e geração de token JWT
+1.  **No GitHub:** As credenciais reais (DB Password, Host, etc.) estão salvas em **Settings > Environments** (`dev` e `prod`).
+2.  **No Docker Compose:** O arquivo `docker-compose.yml` utiliza placeholders (`${VARIAVEL}`).
+3.  **Na Execução:** Durante o deploy, o GitHub Actions injeta os valores dos secrets em um arquivo `.env` dentro do servidor, que é lido pelo Docker Compose ao subir os containers.
 
----
+### Variáveis Necessárias (GitHub Secrets)
 
-## 🔗 WebSocket
-
-O **WebSocket** é inicializado junto ao servidor HTTP e utiliza **JWT** para autenticação de conexão.  
-Os eventos principais estão definidos em:
-
-```
-src/lib/socket.ts
-```
+| Variável | Descrição |
+| :--- | :--- |
+| `AWS_ROLE_ARN` | ARN da Role IAM para OIDC |
+| `AWS_REGION` | Região da AWS (ex: us-east-1) |
+| `EC2_HOST` | IP Elástico da instância EC2 |
+| `EC2_SSH_KEY` | Chave privada `.pem` para acesso SSH |
+| `DB_HOST` | Host do Banco de Dados (Neon/RDS) |
+| `DB_USERNAME` | Usuário do Banco |
+| `DB_PASSWORD` | Senha do Banco |
+| `DB_NAME` | Nome do Banco (Diferente para Prod e Dev) |
 
 ---
 
-## 📂 Estrutura do Projeto
+## 🐳 Docker & Portas
 
-```
-src/
- ├── controllers   # Lógica dos endpoints
- ├── services      # Regras de negócio
- ├── models        # Modelos Sequelize
- ├── routes        # Definição das rotas
- ├── middlewares   # Middlewares (ex: autenticação)
- ├── utils         # Utilitários (ex: hash de senha)
- └── lib           # Integração com WebSocket
-```
+Utilizamos uma estratégia de mapeamento de portas para manter os ambientes na mesma máquina:
+
+| Ambiente | Branch | Container | Porta Externa (EC2) | Porta Interna (Container) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Produção** | `master` | `api-prod` | **3000** | 3000 |
+| **Homologação** | `dev` | `api-dev` | **3001** | 3000 |
+
+* **Dockerfile:** Otimizado para TypeScript. Realiza o `npm ci`, compila o código (`npm run build`) para a pasta `dist` e executa as migrações do banco antes de iniciar.
 
 ---
 
-## 🛠 Tecnologias
+## 💻 Como Rodar Localmente
 
-- Node.js
-- TypeScript
-- Express
-- Sequelize (PostgreSQL)
-- Socket.IO
-- JWT (jsonwebtoken)
-- Bcrypt
+### Pré-requisitos
+* Node.js 20+
+* Docker & Docker Compose
+
+### Passos
+
+1.  **Instalar dependências:**
+    ```bash
+    npm install
+    ```
+
+2.  **Configurar Variáveis:**
+    Crie um arquivo `.env` na raiz com base no `.env.example`.
+
+3.  **Rodar em modo de desenvolvimento:**
+    ```bash
+    npm run dev
+    ```
+
+4.  **Rodar via Docker (Simulando Prod):**
+    ```bash
+    docker compose up --build api-prod
+    ```
 
 ---
 
-## 📜 Licença
+## 📦 Scripts de Build
 
-Este projeto está sob a licença **ISC**.
+O projeto utiliza TypeScript, portanto o código deve ser transpilado antes da execução em produção.
+
+* `npm run build`: Compila os arquivos `.ts` da pasta `src` para a pasta `dist`.
+* `npm start`: Inicia a aplicação rodando o arquivo compilado `dist/server.js`.
+* `npm run dev`: Inicia a aplicação com `nodemon` e `ts-node` (apenas desenvolvimento).
+
+---
+
+## 📝 Comandos Úteis (No Servidor)
+
+Para manutenção na EC2:
+
+```bash
+# Ver containers rodando
+docker ps
+
+# Ver logs de produção (tempo real)
+docker logs -f api-prod
+
+# Ver logs de homologação
+docker logs -f api-dev
+
+# Reiniciar um serviço manualmente
+docker compose restart api-prod
