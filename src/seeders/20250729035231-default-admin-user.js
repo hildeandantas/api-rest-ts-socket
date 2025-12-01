@@ -1,5 +1,7 @@
 "use strict";
 
+//Desativado por hora, será configurado posteriormente
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
