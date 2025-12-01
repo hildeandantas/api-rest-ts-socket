@@ -1,4 +1,4 @@
-name: CI/CD Docker EC2 Single Host
+name: CI/CD Docker EC2 TypeORM
 
 on:
   push:
@@ -20,41 +20,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # (Opcional) Build de teste para garantir que não tem erro de sintaxe
-      - name: Setup Node para Teste
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm ci && npm run build --if-present
-
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy via SSH (Docker Compose)
+      - name: Deploy na EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }} # ubuntu
+          username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # 1. Entra na pasta
             cd /home/ubuntu/meu-projeto-api
             
-            # 1. Baixa as atualizações do código
+            # 2. Atualiza o código
             git pull origin ${{ github.ref_name }}
-            
-            # 2. Decide qual container atualizar baseado na branch
+
+            # 3. Cria/Atualiza o arquivo .env com os segredos do GitHub
+            # Isso garante que o Docker Compose tenha acesso às senhas do banco
+            echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
+            echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            # Aqui definimos qual banco usar baseado no ambiente
             if [ "${{ github.ref_name }}" == "master" ]; then
-              echo "Atualizando PRODUCAO..."
-              # Reconstrói e reinicia APENAS o container de prod
-              docker compose up -d --build api-prod
+               echo "DB_DATABASE_PROD=${{ secrets.DB_NAME }}" >> .env
+               echo "DB_DATABASE_DEV=ignorar_dev" >> .env
+               CONTAINER="api-prod"
             else
-              echo "Atualizando DEV/HOMOLOG..."
-              # Reconstrói e reinicia APENAS o container de dev
-              docker compose up -d --build api-dev
+               echo "DB_DATABASE_PROD=ignorar_prod" >> .env
+               echo "DB_DATABASE_DEV=${{ secrets.DB_NAME }}" >> .env
+               CONTAINER="api-dev"
             fi
+
+            # 4. Sobe o container específico (Build + Up)
+            # O --env-file garante que o docker-compose leia o arquivo que acabamos de criar
+            docker compose --env-file .env up -d --build $CONTAINER
             
-            # Limpa imagens antigas para não lotar o disco da EC2
+            # 5. Limpeza de imagens antigas
             docker image prune -f
