@@ -44,6 +44,8 @@ jobs:
             echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
             echo "DB_USER=${{ secrets.DB_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            # JWT_SECRET
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
             # Aqui definimos qual banco usar baseado no ambiente
             if [ "${{ github.ref_name }}" == "master" ]; then
                echo "DB_DATABASE_PROD=${{ secrets.DB_NAME }}" >> .env
