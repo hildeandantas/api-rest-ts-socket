@@ -20,4 +20,4 @@ EXPOSE 3000
 
 # 6. Script de inicialização (Roda migração antes de subir o servidor)
 # Usamos 'sh -c' para poder rodar múltiplos comandos
-CMD ["sh", "-c", "npx sequelize-cli db:migrate && npx sequelize-cli db:migrate && npm run start:prod"]
+CMD ["sh", "-c", "npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all && npm run start:prod"]
