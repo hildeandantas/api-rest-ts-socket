@@ -9,10 +9,10 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DB_NAME='bdhd'
-      - DB_USER='freela_owner'
-      - DB_PASSWORD='npg_Xcb2WhL4HsKf'
-      - DB_HOST='ep-old-bird-a5y22y5j-pooler.us-east-2.aws.neon.tech'
+      - DB_NAME=bdhd
+      - DB_USER=freela_owner
+      - DB_PASSWORD=npg_Xcb2WhL4HsKf
+      - DB_HOST=ep-old-bird-a5y22y5j-pooler.us-east-2.aws.neon.tech
     ports:
       - "3000:3000"
 
