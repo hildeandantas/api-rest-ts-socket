@@ -10,7 +10,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DB_NAME=${DB_DATABASE_PROD}
-      - DB_USER=${DB_USERNAME}
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=${DB_HOST}
     ports:
@@ -25,7 +25,7 @@ services:
       - NODE_ENV=development
       - PORT=3000
       - DB_NAME=${DB_DATABASE_DEV}
-      - DB_USER=${DB_USERNAME}
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=${DB_HOST}
     ports:
