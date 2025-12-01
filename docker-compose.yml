@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # --- API DE PRODUÇÃO (Porta 3000) ---
+  #Prod
   api-prod:
     container_name: api-prod
     build: .
@@ -9,23 +9,24 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DB_NAME=bdhd
-      - DB_USER=freela_owner
-      - DB_PASSWORD=npg_Xcb2WhL4HsKf
-      - DB_HOST=ep-old-bird-a5y22y5j-pooler.us-east-2.aws.neon.tech
+      - DB_NAME=${DB_DATABASE_PROD}
+      - DB_USER=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
     ports:
       - "3000:3000"
 
-  # --- API DE HOMOLOGAÇÃO/DEV (Porta 3001) ---
+  # Dev
   api-dev:
     container_name: api-dev
     build: .
     restart: always
     environment:
       - NODE_ENV=development
-      - PORT=3000 # O Nest dentro do container acha que é 3000
-      - DB_USER='freela_owner'
-      - DB_PASSWORD='npg_Xcb2WhL4HsKf'
-      - DB_HOST='ep-old-bird-a5y22y5j-pooler.us-east-2.aws.neon.tech'
+      - PORT=3000
+      - DB_NAME=${DB_DATABASE_DEV}
+      - DB_USER=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
     ports:
-      - "3001:3000" # Mapeia a porta 3001 externa para a 3000 interna
+      - "3001:3000"
