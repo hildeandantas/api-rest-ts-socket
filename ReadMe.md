@@ -1,116 +1,133 @@
-# API REST TS Socket - Infraestrutura & CI/CD
+# API REST Template com TypeScript, JWT, WebSocket e Docker
 
-Este projeto consiste em uma API desenvolvida em **Node.js (TypeScript)**, utilizando **Docker** para containerização e **AWS EC2** para hospedagem.
+Este projeto é um template de **API RESTful** desenvolvido em **TypeScript** utilizando **Express**, com autenticação **JWT** e integração de **WebSocket** via **Socket.IO**.
 
-O diferencial desta infraestrutura é a estratégia de **Otimização de Custos**, onde rodamos dois ambientes isolados (Produção e Homologação) dentro de uma única instância EC2, utilizando Docker Compose para orquestração de portas e serviços.
-
-## 🚀 Arquitetura de Deploy
-
-O deploy é totalmente automatizado via **GitHub Actions**, conectando-se à AWS de forma segura sem chaves permanentes (long-lived credentials).
-
-### Fluxo do Pipeline (CI/CD)
-
-1.  **Trigger:**
-    * Push na branch `dev` -> Dispara deploy para ambiente de **Homologação**.
-    * Merge/Push na branch `master` -> Dispara deploy para ambiente de **Produção**.
-2.  **Segurança (OIDC):**
-    * O GitHub Actions se autentica na AWS assumindo uma **IAM Role** específica via **OpenID Connect (OIDC)**. Isso elimina a necessidade de salvar `AWS_ACCESS_KEY` nos secrets.
-3.  **Acesso ao Servidor:**
-    * O workflow acessa a instância EC2 via SSH utilizando uma chave privada armazenada nos GitHub Secrets.
-4.  **Build & Deploy:**
-    * O código é atualizado (`git pull`).
-    * Um arquivo `.env` é gerado dinamicamente com base nos segredos do ambiente (Dev ou Prod).
-    * O Docker Compose constrói a imagem e recria apenas o container do ambiente específico.
+Além das funcionalidades de aplicação, este projeto conta com uma infraestrutura completa de **CI/CD** configurada com **GitHub Actions**, **Docker** e **AWS EC2**, permitindo deploy automatizado em múltiplos ambientes (Produção e Homologação) com otimização de custos.
 
 ---
 
-## 🛠️ Gerenciamento de Variáveis de Ambiente
+## 🚀 Funcionalidades
 
-Por segurança, **nenhuma senha ou credencial é versionada** no código.
+### Aplicação
+- **API RESTful** com rotas para CRUD de usuários.
+- **Autenticação JWT** para proteção de rotas.
+- **WebSocket** com Socket.IO para tempo real.
+- **TypeScript** para tipagem estática.
+- **Sequelize** (PostgreSQL) para banco de dados.
 
-1.  **No GitHub:** As credenciais reais (DB Password, Host, etc.) estão salvas em **Settings > Environments** (`dev` e `prod`).
-2.  **No Docker Compose:** O arquivo `docker-compose.yml` utiliza placeholders (`${VARIAVEL}`).
-3.  **Na Execução:** Durante o deploy, o GitHub Actions injeta os valores dos secrets em um arquivo `.env` dentro do servidor, que é lido pelo Docker Compose ao subir os containers.
-
-### Variáveis Necessárias (GitHub Secrets)
-
-| Variável | Descrição |
-| :--- | :--- |
-| `AWS_ROLE_ARN` | ARN da Role IAM para OIDC |
-| `AWS_REGION` | Região da AWS (ex: us-east-1) |
-| `EC2_HOST` | IP Elástico da instância EC2 |
-| `EC2_SSH_KEY` | Chave privada `.pem` para acesso SSH |
-| `DB_HOST` | Host do Banco de Dados (Neon/RDS) |
-| `DB_USERNAME` | Usuário do Banco |
-| `DB_PASSWORD` | Senha do Banco |
-| `DB_NAME` | Nome do Banco (Diferente para Prod e Dev) |
+### Infraestrutura & DevOps
+- **Dockerização:** Aplicação rodando em containers isolados.
+- **CI/CD Automatizado:** Pipeline via GitHub Actions com autenticação segura (OIDC).
+- **Multi-Ambiente:** Produção e Homologação rodando na mesma instância EC2 (Cost Optimization).
+- **Zero Downtime (quase):** Reinício automático de containers via Docker Compose.
 
 ---
 
-## 🐳 Docker & Portas
+## 📦 Instalação e Execução
 
-Utilizamos uma estratégia de mapeamento de portas para manter os ambientes na mesma máquina:
+### Opção 1: Desenvolvimento Local (Sem Docker)
 
-| Ambiente | Branch | Container | Porta Externa (EC2) | Porta Interna (Container) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Produção** | `master` | `api-prod` | **3000** | 3000 |
-| **Homologação** | `dev` | `api-dev` | **3001** | 3000 |
+1. Clone o repositório:
+   git clone https://github.com/seu-usuario/api-rest-ts-socket.git
+   cd api-rest-ts-socket
 
-* **Dockerfile:** Otimizado para TypeScript. Realiza o `npm ci`, compila o código (`npm run build`) para a pasta `dist` e executa as migrações do banco antes de iniciar.
+2. Instale as dependências:
+   npm install
 
----
+3. Configure as variáveis de ambiente:
+   Renomeie o arquivo `.env.example` para `.env` e preencha com suas configurações locais.
 
-## 💻 Como Rodar Localmente
+4. Execute as migrações e seeds:
+   npm run init
 
-### Pré-requisitos
-* Node.js 20+
-* Docker & Docker Compose
+5. Inicie o servidor em modo watch:
+   npm run dev
 
-### Passos
+### Opção 2: Rodando com Docker (Simulando Produção)
 
-1.  **Instalar dependências:**
-    ```bash
-    npm install
-    ```
+Para testar a versão final que irá para a AWS:
 
-2.  **Configurar Variáveis:**
-    Crie um arquivo `.env` na raiz com base no `.env.example`.
+1. Gere o build e suba o container:
+   docker compose up --build api-prod
 
-3.  **Rodar em modo de desenvolvimento:**
-    ```bash
-    npm run dev
-    ```
-
-4.  **Rodar via Docker (Simulando Prod):**
-    ```bash
-    docker compose up --build api-prod
-    ```
+2. A aplicação estará disponível em http://localhost:3000
 
 ---
 
-## 📦 Scripts de Build
+## ☁️ Infraestrutura e Deploy (AWS)
 
-O projeto utiliza TypeScript, portanto o código deve ser transpilado antes da execução em produção.
+O projeto está configurado para rodar em uma instância **AWS EC2** utilizando **Docker Compose** para orquestrar os ambientes.
 
-* `npm run build`: Compila os arquivos `.ts` da pasta `src` para a pasta `dist`.
-* `npm start`: Inicia a aplicação rodando o arquivo compilado `dist/server.js`.
-* `npm run dev`: Inicia a aplicação com `nodemon` e `ts-node` (apenas desenvolvimento).
+### Fluxo de CI/CD (GitHub Actions)
+
+O pipeline de deploy é disparado automaticamente baseado na branch:
+
+| Evento | Branch | Ambiente de Destino | Porta na EC2 |
+| :--- | :--- | :--- | :--- |
+| **Push** | `dev` | **Homologação** (api-dev) | Porta **3001** |
+| **Push/Merge** | `master` | **Produção** (api-prod) | Porta **3000** |
+
+### Segurança e Variáveis
+
+Nenhuma credencial é salva no código. O gerenciamento é feito via **GitHub Secrets**:
+
+1. O GitHub Actions se conecta à AWS via **OIDC** (sem chaves de acesso fixas).
+2. As senhas (`DB_PASSWORD`, `JWT_SECRET`, etc.) são injetadas em um arquivo `.env` seguro dentro do servidor apenas durante o deploy.
+3. O Docker Compose lê essas variáveis para subir os containers.
 
 ---
 
-## 📝 Comandos Úteis (No Servidor)
+## 📌 Rotas Principais
 
-Para manutenção na EC2:
+- **Usuários**
+  - POST /users/create — Criação de usuário
+  - GET /users/:id — Busca de usuário por ID (JWT obrigatório)
+  - GET /users/ — Listagem de usuários (JWT obrigatório)
+  - PUT /users/:id — Edição de usuário (JWT obrigatório)
+  - DELETE /users/:id — Deleção de usuário (JWT obrigatório)
 
-```bash
-# Ver containers rodando
-docker ps
+- **Autenticação**
+  - POST /auth/login — Login e geração de token JWT
 
-# Ver logs de produção (tempo real)
-docker logs -f api-prod
+---
 
-# Ver logs de homologação
-docker logs -f api-dev
+## 🔗 WebSocket
 
-# Reiniciar um serviço manualmente
-docker compose restart api-prod
+O **WebSocket** é inicializado junto ao servidor HTTP e utiliza **JWT** para autenticação de conexão.  
+Os eventos principais estão definidos em:
+
+src/lib/socket.ts
+
+---
+
+## 📂 Estrutura do Projeto
+
+src/
+ ├── controllers   # Lógica dos endpoints
+ ├── services      # Regras de negócio
+ ├── models        # Modelos Sequelize
+ ├── routes        # Definição das rotas
+ ├── middlewares   # Middlewares (ex: autenticação)
+ ├── utils         # Utilitários (ex: hash, erros)
+ └── lib           # Integração com WebSocket
+.github/
+ └── workflows     # Pipelines de CI/CD
+docker-compose.yml # Orquestração dos containers
+Dockerfile         # Receita de build da imagem
+
+---
+
+## 🛠 Tecnologias
+
+- **Backend:** Node.js, TypeScript, Express
+- **Banco de Dados:** PostgreSQL, Sequelize
+- **Realtime:** Socket.IO
+- **Segurança:** JWT, Bcrypt
+- **Infraestrutura:** Docker, Docker Compose, AWS EC2
+- **CI/CD:** GitHub Actions
+
+---
+
+## 📜 Licença
+
+Este projeto está sob a licença **ISC**.
