@@ -42,7 +42,7 @@ jobs:
             # 3. Cria/Atualiza o arquivo .env com os segredos do GitHub
             # Isso garante que o Docker Compose tenha acesso às senhas do banco
             echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
-            echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
             # Aqui definimos qual banco usar baseado no ambiente
             if [ "${{ github.ref_name }}" == "master" ]; then
