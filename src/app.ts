@@ -1,7 +1,7 @@
 import express, { Application } from "express";
-import indexRoutes from "./src/routes";
-import userRoutes from "./src/routes/user";
-import authRoutes from "./src/routes/auth";
+import indexRoutes from "./routes";
+import userRoutes from "./routes/user";
+import authRoutes from "./routes/auth";
 
 export default class App {
   public app: Application;
