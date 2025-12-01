@@ -34,7 +34,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # 1. Entra na pasta
-            cd /home/ubuntu/mapi-rest-ts-socket
+            cd /home/ubuntu/api-rest-ts-socket
             
             # 2. Atualiza o código
             git pull origin ${{ github.ref_name }}
