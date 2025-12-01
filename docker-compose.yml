@@ -13,6 +13,7 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=${DB_HOST}
+      - JWT_SECRET=${JWT_SECRET}
     ports:
       - "3000:3000"
 
@@ -28,5 +29,6 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=${DB_HOST}
+      - JWT_SECRET=${JWT_SECRET}
     ports:
       - "3001:3000"
