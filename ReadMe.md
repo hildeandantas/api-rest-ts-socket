@@ -80,7 +80,7 @@ Nenhuma credencial é salva no código. O gerenciamento é feito via **GitHub Se
 ## 📌 Rotas Principais
 
 - **Usuários**
-  - POST /users/create — Criação de usuário
+  - POST /users/create — Criação de usuário (Campos Necessários: firstName, LastName, Email and Password)
   - GET /users/:id — Busca de usuário por ID (JWT obrigatório)
   - GET /users/ — Listagem de usuários (JWT obrigatório)
   - PUT /users/:id — Edição de usuário (JWT obrigatório)
